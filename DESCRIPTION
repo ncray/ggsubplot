@@ -1,0 +1,39 @@
+Package: ggsubplot
+Version: 0.4.0
+Title: Explore Complex Data by Embedding Subplots
+Description: Embed customized subplots within larger
+    graphics. Subplots may be used as a geom to explore interaction effects,
+    spatial data, and hierarchical data. Subplots can also be used to explore
+    big data without overplotting.
+Authors@R: c(
+    person("Garrett", "Grolemund", , "garret@rstudio.com", c("aut")),
+    person("Hadley", "Wickham", , "hadley@rstudio.com", c("aut")),
+    person("RStudio", role = "cph"),
+    person("ncray", email = "322031+ncray@users.noreply.github.com", role = c("ctb", "cre"),
+        comment = "Maintainer of the modernization fork; contact via GitHub issues")
+    )
+URL: https://github.com/ncray/ggsubplot,
+    https://github.com/garrettgman/ggsubplot
+BugReports: https://github.com/ncray/ggsubplot/issues
+License: GPL (>= 2)
+LazyData: true
+Depends:
+    R (>= 4.1)
+Imports:
+    ggplot2 (>= 3.5.2),
+    rlang,
+    vctrs,
+    grid,
+    cli,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    vdiffr,
+    maps,
+    mapproj,
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0
+Encoding: UTF-8
+VignetteBuilder: knitr

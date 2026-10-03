@@ -1,0 +1,11 @@
+^\.dev$
+^PLAN\.md$
+^docs$
+^ggsubplot\.Rproj$
+^.*\.Rcheck$
+^.*\.tar\.gz$
+^MODERNIZATION_NOTES\.md$
+^tools$
+^\.github$
+^CONTRIBUTING\.md$
+^RELEASE_CHECKLIST\.md$

@@ -1,0 +1,133 @@
+---
+title: "Embedding subplots with ggsubplot"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Embedding subplots with ggsubplot}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 5, collapse = TRUE, comment = "#>")
+library(ggplot2)
+library(ggsubplot)
+```
+
+A subplot layer places a small ggplot2 layer at each major location. The major
+mapping locates the boxes; the minor mapping describes their contents. These
+layers work with ordinary ggplot2 plots, themes, scales, coordinates, and
+`ggsave()`.
+
+The bundled `nasa` and `casualties` objects are entirely synthetic. Their names
+and columns preserve historical example compatibility; they contain no real
+NASA observations or Afghan War Diary records. All plots below using these
+objects illustrate fictional data.
+
+Use `group` to identify the observations belonging to each box. Major x and y
+must be constant within each group; expressions such as `mean(long)` and
+`mean(lat)` can locate groups with varying coordinates.
+
+```{r nasa-points}
+n <- subset(nasa, year == 1995 & long > -100 & long < -90 & lat > 30 & lat < 40)
+ggplot(n) +
+  geom_subplot(aes(long, lat, group = id),
+    subplot = geom_point(aes(month, surftemp)),
+    width = 2, height = 2, reference = ref_box()) +
+  coord_quickmap() + labs(x = "Longitude", y = "Latitude")
+```
+
+`width` and `height` are measured in major coordinate units. The default
+`rel(0.95)` uses 95% of the smallest distance between distinct centres along
+that axis, or 95% of one unit when there is only one centre. Minor x and y
+positions, including bar edges and line endpoints, are scaled together into
+the boxes. Minor limits are shared by default. Set `x_scale = free` or
+`y_scale = free` to use separate limits for each box; this highlights shapes
+but removes direct magnitude comparisons along that axis.
+
+For compatibility, the minor layer can still be captured inside `aes()`:
+
+```{r historical-spelling}
+ggplot(n) + geom_subplot(aes(long, lat, group = id,
+  subplot = geom_line(aes(month, surftemp))), width = 2, height = 2) +
+  coord_quickmap()
+```
+
+Minor aesthetics are evaluated within each subplot. For example,
+`fill = mean(surftemp)` gives one colour to every row in a location. Use
+`ply.aes = FALSE` to evaluate minor expressions on the entire layer data, or
+`ply.aes = c("fill")` to evaluate only fill within each subplot. `I()` has its
+normal ggplot2 meaning: an identity aesthetic, such as `colour = I("red")`.
+Expressions containing `after_stat()`, `after_scale()`, or `stage()` are
+handled by ggplot2. Legends and explicit non-position scales are shared with
+the outer plot.
+
+```{r stars}
+ggplot(n) + geom_subplot(aes(long, lat, group = id),
+  subplot = geom_star(aes(angle = month,
+    r = (surftemp - min(surftemp)) / (max(surftemp) - min(surftemp)),
+    fill = mean(surftemp))), width = 2, height = 2) +
+  scale_fill_viridis_c(name = "Mean temperature (K)") + coord_quickmap()
+```
+
+`geom_subplot2d()` assigns rows to a grid using `cut(..., include.lowest = TRUE)`.
+Supply `bins`, `binwidth`, or explicit x/y `breaks` (in decreasing precedence:
+breaks, binwidth, bins). Missing and out-of-range locations are omitted. Grid
+centres are cell midpoints, and unequal break spacing gives unequal box sizes.
+Only occupied cells are drawn. Reference boxes are supplied by default.
+
+```{r casualties}
+c <- subset(casualties, year == 2004 & lon > 60 & lon < 75 & lat > 29 & lat < 39)
+p <- ggplot(c) + geom_subplot2d(aes(lon, lat), bins = c(5, 4),
+  subplot = geom_bar(aes(victim, fill = victim)), y_scale = free) +
+  coord_quickmap() + labs(x = "Longitude", y = "Latitude")
+if (requireNamespace("maps", quietly = TRUE)) {
+  afghanistan <- map_data("world", region = "Afghanistan")
+  p <- ggplot(c) + geom_polygon(data = afghanistan,
+    aes(long, lat, group = group), fill = "grey97", colour = "grey60") +
+    p$layers + coord_quickmap() + labs(x = "Longitude", y = "Latitude")
+}
+p
+```
+
+Coxcombs use sector **areas** for counts, so radii are proportional to the
+square root of counts. Different fill groups in a sector stack in area.
+The default stat counts categorical angles; numeric histograms use
+`stat = "bin"` with explicit `bins` or `binwidth`. Frequency stars use the
+same counting choices. Ordinary stars take `angle` and `r` directly.
+
+```{r coxcombs}
+ggplot(c) + geom_subplot2d(aes(lon, lat), bins = c(5, 4),
+  subplot = geom_coxcomb(aes(angle = month, fill = victim)),
+  reference = NULL) + coord_quickmap()
+```
+
+`ref_box()`, `ref_hline()`, and `ref_vline()` create reference factories. Their
+minor coordinates are already in `[-1, 1]` and are placed without further
+normalization. Reference mappings are evaluated on the rows of each subplot,
+then drawn once per occupied subplot.
+
+Use `position = "merge"` to pool overlapping locations, including transitive
+overlaps. The merged location is the mean of constituent centres; its box size
+is the maximum original size on each axis. This adjustment aggregates data
+before computing the minor stat.
+
+```{r merging}
+d <- data.frame(X = rep(c(0, .8, 1.6, 5), each = 3),
+  id = rep(1:4, each = 3), a = rep(1:3, 4), b = 1:12)
+ggplot(d) + geom_subplot(aes(X, 0, group = id),
+  subplot = geom_point(aes(a, b)), width = 1, height = 1,
+  position = "merge", reference = ref_box()) + coord_equal()
+```
+
+`ply_aes()` applies the grouped evaluator to an ordinary layer. It uses the
+group aesthetic, or an explicit vector of column names in `.vars`.
+
+```{r ply}
+ggplot(mtcars) + ply_aes(geom_point(aes(wt, mpg, group = cyl,
+  colour = mean(mpg)))) + labs(colour = "Mean mpg by cylinders")
+```
+
+Outer facets and nested subplots are unsupported and produce clear errors.
+Major discrete coordinates become numeric positions; label their continuous
+outer axes explicitly if needed. Minor layers take the rows assigned by the
+subplot layer; put any layer-specific data on `geom_subplot()` itself.

@@ -1,0 +1,14 @@
+.Rhistory
+.Rproj.user
+.RData
+.dev/codex
+.dev/rlib/
+*.Rcheck/
+*.tar.gz
+Rplots.pdf
+.dev/*.log
+.dev/*.png
+.dev/codex-code-mode-host
+
+.dev/manual.html
+.dev/public-source-*/
